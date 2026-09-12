@@ -1,13 +1,16 @@
 # API de Pedidos
 
-API REST para gestionar usuarios, productos y pedidos, desarrollada como práctica de la materia **Bases de Datos en la Nube**.
+Este es mi proyecto para la práctica de **Bases de Datos en la Nube**: una API REST con FastAPI conectada a PostgreSQL en Neon, que maneja un sistema de pedidos con usuarios, productos e inventario.
 
-## Stack utilizado
+## Por qué este stack
 
-- **Base de datos:** PostgreSQL en Neon (cloud)
-- **Backend:** FastAPI (Python)
-- **ORM:** SQLAlchemy
-- **Documentación interactiva:** Swagger (OpenAPI, generado automáticamente por FastAPI)
+Elegí Neon porque es PostgreSQL real pero con un free tier fácil de usar para un proyecto escolar, y FastAPI porque genera documentación Swagger automáticamente, lo cual me sirvió muchísimo para probar los endpoints sin tener que montar Postman desde cero. Para el ORM usé SQLAlchemy, conectado mediante variables de entorno para no dejar credenciales expuestas en el código.
+
+## Modelo de datos
+
+El sistema tiene 4 tablas: `usuarios`, `productos`, `pedidos` y `detalle_pedido`. La razón de la cuarta tabla es que un pedido puede tener varios productos y un producto puede aparecer en varios pedidos, así que `detalle_pedido` funciona como tabla intermedia entre ambos. Un usuario puede tener muchos pedidos, y cada pedido tiene su propio detalle con la cantidad y precio unitario de cada producto al momento de la compra.
+
+Puedes ver el diagrama entidad-relación completo en `diagrama-der.png`.
 
 ## Estructura del proyecto
 
@@ -16,123 +19,64 @@ api-pedidos/
 │
 ├── app/
 │   ├── main.py            # Punto de entrada de la aplicación
-│   ├── database.py        # Conexión a la base de datos (Neon)
-│   ├── models.py          # Modelos SQLAlchemy (tablas)
-│   ├── schemas.py         # Esquemas Pydantic (validación de datos)
-│   │
+│   ├── database.py        # Conexión a Neon
+│   ├── models.py          # Tablas (SQLAlchemy)
+│   ├── schemas.py         # Validación de datos (Pydantic)
 │   └── routers/
 │       ├── usuarios.py
 │       ├── productos.py
 │       └── pedidos.py
 │
-├── .env                    # Variables de entorno (NO se sube a GitHub)
+├── capturas/               # Evidencia de pruebas en Swagger
+├── .env                    # Variables de entorno (no se sube a GitHub)
 ├── .gitignore
 ├── requirements.txt
 ├── diagrama-der.png
 └── README.md
 ```
 
-## Modelo de datos
+## Cómo correrlo
 
-El sistema cuenta con 4 tablas relacionadas:
+1. Clona el repo y entra a la carpeta:
+   ```bash
+   git clone https://github.com/NieblaX/api-pedidos.git
+   cd api-pedidos
+   ```
 
-- **usuarios** → puede tener muchos **pedidos** (1:N)
-- **pedidos** → puede tener muchos **detalle_pedido** (1:N)
-- **productos** → puede aparecer en muchos **detalle_pedido** (1:N)
+2. Crea el entorno virtual y actívalo:
+   ```bash
+   python -m venv venv
+   ```
+   En Windows (PowerShell):
+   ```powershell
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+   .\venv\Scripts\Activate.ps1
+   ```
 
-`detalle_pedido` funciona como tabla intermedia, permitiendo que un pedido tenga varios productos y que un producto aparezca en varios pedidos (N:M entre `pedidos` y `productos`).
+3. Instala las dependencias:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Ver diagrama entidad-relación: `diagrama-der.png`
+4. Crea un archivo `.env` en la raíz con tu propia cadena de conexión de Neon:
+   ```
+   DATABASE_URL="postgresql://usuario:contraseña@servidor/neondb?sslmode=require"
+   ```
 
-## Instalación y ejecución local
+5. Levanta el servidor:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
 
-### 1. Clonar el repositorio
-
-```bash
-git clone https://github.com/TU_USUARIO/api-pedidos.git
-cd api-pedidos
-```
-
-### 2. Crear entorno virtual
-
-```bash
-python -m venv venv
-```
-
-Activarlo:
-
-- **Windows (PowerShell):**
-  ```powershell
-  Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
-  .\venv\Scripts\Activate.ps1
-  ```
-- **Linux / macOS:**
-  ```bash
-  source venv/bin/activate
-  ```
-
-### 3. Instalar dependencias
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Configurar variables de entorno
-
-Crear un archivo `.env` en la raíz del proyecto con tu cadena de conexión de Neon:
-
-```
-DATABASE_URL="postgresql://usuario:contraseña@servidor/neondb?sslmode=require"
-```
-
-### 5. Ejecutar el servidor
-
-```bash
-uvicorn app.main:app --reload
-```
-
-La API quedará disponible en:
-
-- App: [http://127.0.0.1:8000](http://127.0.0.1:8000)
-- Documentación Swagger: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-
-Al iniciar, las tablas se crean automáticamente en Neon si no existen (`Base.metadata.create_all`).
+La API queda en `http://127.0.0.1:8000` y la documentación interactiva en `http://127.0.0.1:8000/docs`. Al arrancar, las 4 tablas se crean solas en Neon si todavía no existen.
 
 ## Endpoints
 
-### Usuarios
+Usuarios y productos tienen el CRUD completo: `GET /usuarios/`, `GET /usuarios/{id}`, `POST`, `PUT` y `DELETE` (igual para `/productos/`).
 
-| Método | Endpoint          | Descripción                |
-|--------|-------------------|-----------------------------|
-| GET    | `/usuarios/`       | Lista todos los usuarios   |
-| GET    | `/usuarios/{id}`   | Obtiene un usuario por ID  |
-| POST   | `/usuarios/`       | Crea un nuevo usuario      |
-| PUT    | `/usuarios/{id}`   | Actualiza un usuario       |
-| DELETE | `/usuarios/{id}`   | Elimina un usuario         |
-
-### Productos
-
-| Método | Endpoint            | Descripción                  |
-|--------|---------------------|-------------------------------|
-| GET    | `/productos/`        | Lista todos los productos    |
-| GET    | `/productos/{id}`    | Obtiene un producto por ID   |
-| POST   | `/productos/`        | Crea un nuevo producto       |
-| PUT    | `/productos/{id}`    | Actualiza un producto        |
-| DELETE | `/productos/{id}`    | Elimina un producto          |
-
-### Pedidos
-
-| Método | Endpoint          | Descripción                                              |
-|--------|-------------------|-----------------------------------------------------------|
-| GET    | `/pedidos/`        | Lista todos los pedidos                                   |
-| GET    | `/pedidos/{id}`    | Obtiene un pedido con su usuario y detalle de productos    |
-| POST   | `/pedidos/`        | Crea un pedido, valida stock, descuenta inventario y calcula el total |
-| DELETE | `/pedidos/{id}`    | Elimina un pedido (elimina en cascada su detalle)          |
-
-## Ejemplo de creación de pedido
+El endpoint que más trabajo me costó fue `POST /pedidos/`, porque no solo crea el registro, sino que valida que el usuario y los productos existan, revisa que haya stock suficiente para cada producto, descuenta el inventario, calcula el total sumando cada línea, y crea los registros de `detalle_pedido` correspondientes — todo en una sola transacción. Ejemplo de lo que espera:
 
 ```json
-POST /pedidos/
 {
   "usuario_id": 1,
   "productos": [
@@ -142,18 +86,16 @@ POST /pedidos/
 }
 ```
 
-La API valida que el usuario y los productos existan, verifica que haya stock suficiente, descuenta el inventario y calcula el total automáticamente.
+`GET /pedidos/{id}` regresa el pedido completo con los datos del usuario y el detalle de cada producto anidado, y `DELETE /pedidos/{id}` borra el pedido junto con su detalle gracias al cascade configurado en el modelo.
 
 ## Manejo de errores
 
-| Código | Caso                                              |
-|--------|----------------------------------------------------|
-| 200    | Operación exitosa (GET, DELETE)                    |
-| 201    | Recurso creado exitosamente (POST)                 |
-| 400    | Solicitud inválida (correo duplicado, stock insuficiente) |
-| 404    | Recurso no encontrado (usuario, producto o pedido)  |
-| 422    | Error de validación de datos (tipo de dato incorrecto) |
+Los endpoints regresan `404` cuando no encuentran un usuario, producto o pedido, y `400` en casos como intentar registrar un correo que ya existe o pedir más cantidad de un producto de la que hay en stock. Las capturas de estas pruebas están en la carpeta `capturas/`.
+
+## Un problema que me tocó resolver
+
+Mientras probaba, me empezó a tronar el `POST /pedidos/` con un error 500 de `SSL connection has been closed unexpectedly`. Investigando encontré que Neon cierra las conexiones inactivas después de un rato, y SQLAlchemy seguía intentando usar una conexión del pool que ya estaba muerta del lado del servidor. Se resolvió agregando `pool_pre_ping=True` y `pool_recycle=300` al engine en `database.py`, para que verifique la conexión antes de usarla y la recicle cada 5 minutos.
 
 ## Seguridad
 
-Las credenciales de conexión a la base de datos se manejan mediante variables de entorno (`.env`), el cual está excluido del control de versiones mediante `.gitignore`.
+La cadena de conexión a Neon vive únicamente en `.env`, el cual está excluido del repositorio mediante `.gitignore` — nunca se sube a GitHub.
